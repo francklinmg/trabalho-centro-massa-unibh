@@ -38,7 +38,7 @@
       z-index: 10;
       box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
       overflow-y: auto;
-      max-height: 50vh; /* Não ocupa mais que metade da tela no celular */
+      max-height: 50vh; /* Ocupa no máximo metade da tela no celular */
     }
 
     /* Ajustes específicos para Desktop/Telas Grandes */
@@ -70,7 +70,7 @@
 
     input[type="range"], select {
       width: 100%;
-      height: 40px; /* Facilita o clique com o polegar no celular */
+      height: 40px; /* Facilita o toque com o polegar no celular */
       padding: 6px 12px;
       background: #2b2b36;
       border: 1px solid #444;
@@ -114,7 +114,7 @@
   <!-- Elemento 3D Canvas -->
   <div id="canvas-container"></div>
 
-  <!-- Painel Interativo de Controles na parte inferior (mobile) -->
+  <!-- Painel Interativo de Controles -->
   <div id="ui">
     <div class="control-group">
       <label for="tiltDirection">Eixo de Inclinação:</label>
@@ -142,7 +142,7 @@
     </div>
 
     <div class="info-box">
-      Altura do CM ($h_{CM}$): <strong id="cmHeightValue">0.0</strong>m<br>
+      Altura do CM (h<sub>CM</sub>): <strong id="cmHeightValue">0.0</strong>m<br>
       Base de Apoio Usada: <strong id="baseWidthValue">0.0</strong>m<br>
       Ângulo Limite Teórico: <strong id="criticalAngleValue">0°</strong>
     </div>
@@ -349,7 +349,7 @@
     renderer.render(scene, camera);
   }
 
-  // Redimensionamento responsivo dinâmico da janela/tela
+  // Redimensionamento responsivo dinâmico
   window.addEventListener('resize', () => {
     camera.aspect = container.clientWidth / container.clientHeight;
     camera.updateProjectionMatrix();
