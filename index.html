@@ -1,363 +1,265 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Caminhão 3D - Centro de Massa (UniBH)</title>
-  <style>
-    * {
-      box-sizing: border-box;
-    }
-    body, html {
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      background-color: #1e1e24;
-      color: #fff;
-      display: flex;
-      flex-direction: column;
-    }
-
-    /* Área do Renderizador 3D Canvas */
-    #canvas-container {
-      flex: 1;
-      width: 100%;
-      height: 100%;
-      position: relative;
-      touch-action: none; /* Impede a rolagem padrão da página no celular */
-    }
-
-    /* Painel de Controles */
-    #ui {
-      background: rgba(18, 18, 22, 0.95);
-      backdrop-filter: blur(8px);
-      padding: 16px;
-      z-index: 10;
-      box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
-      overflow-y: auto;
-      max-height: 50vh; /* Ocupa no máximo metade da tela no celular */
-    }
-
-    /* Ajustes específicos para Desktop/Telas Grandes */
-    @media (min-width: 768px) {
-      #ui {
-        position: absolute;
-        top: 20px;
-        left: 20px;
-        width: 320px;
-        max-height: calc(100vh - 40px);
-        border-radius: 12px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-        border: 1px solid rgba(255,255,255,0.1);
-      }
-    }
-
-    .control-group {
-      margin-bottom: 12px;
-    }
-
-    label {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 6px;
-      font-size: 0.9em;
-      font-weight: 500;
-      color: #ddd;
-    }
-
-    input[type="range"], select {
-      width: 100%;
-      height: 40px; /* Facilita o toque com o polegar no celular */
-      padding: 6px 12px;
-      background: #2b2b36;
-      border: 1px solid #444;
-      border-radius: 8px;
-      color: #fff;
-      font-size: 0.95em;
-      outline: none;
-    }
-
-    input[type="range"] {
-      height: 28px;
-      accent-color: #3a86ff;
-    }
-
-    .info-box {
-      background: rgba(255,255,255,0.05);
-      padding: 10px;
-      border-radius: 8px;
-      font-size: 0.85em;
-      color: #ccc;
-      line-height: 1.5;
-      margin-top: 8px;
-    }
-
-    #status {
-      font-weight: bold;
-      margin-top: 10px;
-      padding-top: 10px;
-      border-top: 1px solid rgba(255,255,255,0.1);
-      font-size: 1em;
-      text-align: center;
-    }
-  </style>
-  <!-- Three.js CDN -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <!-- OrbitControls -->
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Caminhão 3D - Centro de Massa (UniBH)</title>
+<style>
+  * { box-sizing: border-box; }
+  body, html { margin:0; padding:0; width:100%; height:100%; overflow:hidden; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; background:#1e1e24; color:#fff; display:flex; flex-direction:column; }
+  #canvas-container { flex:1; width:100%; height:100%; position:relative; touch-action:none; }
+  #ui { background:rgba(18,18,22,.95); backdrop-filter:blur(8px); padding:16px; z-index:10; box-shadow:0 -4px 20px rgba(0,0,0,.5); overflow-y:auto; max-height:55vh; }
+  @media (min-width:768px) {
+    #ui { position:absolute; top:20px; left:20px; width:330px; max-height:calc(100vh - 40px); border-radius:12px; border:1px solid rgba(255,255,255,.1); }
+  }
+  .control-group { margin-bottom:12px; }
+  label, .lbl { display:flex; justify-content:space-between; margin-bottom:6px; font-size:.9em; font-weight:500; color:#ddd; }
+  input[type=range], select { width:100%; height:40px; padding:6px 12px; background:#2b2b36; border:1px solid #444; border-radius:8px; color:#fff; font-size:.95em; outline:none; }
+  input[type=range] { height:28px; accent-color:#3a86ff; }
+  .info-box { background:rgba(255,255,255,.05); padding:10px; border-radius:8px; font-size:.85em; color:#ccc; line-height:1.6; margin-top:8px; }
+  #status { font-weight:bold; margin-top:10px; padding-top:10px; border-top:1px solid rgba(255,255,255,.1); text-align:center; }
+  #grid { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; max-width:210px; margin:0 auto; }
+  .cell { height:46px; border-radius:8px; border:1px solid #555; background:#2b2b36; color:#aaa; font-size:.75em; cursor:pointer; }
+  .cell.on { background:#f77f00; border-color:#ffb347; color:#fff; font-weight:bold; }
+  .cols { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; max-width:210px; margin:0 auto 4px; font-size:.72em; color:#999; text-align:center; }
+  .row { display:flex; gap:8px; }
+  .row button { flex:1; height:36px; background:#2b2b36; color:#fff; border:1px solid #444; border-radius:8px; cursor:pointer; }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 </head>
 <body>
+<div id="canvas-container"></div>
 
-  <!-- Elemento 3D Canvas -->
-  <div id="canvas-container"></div>
-
-  <!-- Painel Interativo de Controles -->
-  <div id="ui">
-    <div class="control-group">
-      <label for="tiltDirection">Eixo de Inclinação:</label>
-      <select id="tiltDirection">
-        <option value="side" selected>Lateral (Lado / Capotamento)</option>
-        <option value="front">Frontal (Subida / Descida)</option>
-      </select>
-    </div>
-
-    <div class="control-group">
-      <label for="rampAngle">
-        <span>Inclinação Rampa:</span>
-        <span id="angleValue">0°</span>
-      </label>
-      <input type="range" id="rampAngle" min="0" max="60" value="0" step="0.5">
-    </div>
-
-    <div class="control-group">
-      <label for="cargoState">Estado da Carga:</label>
-      <select id="cargoState">
-        <option value="empty">Vazio (CM Baixo)</option>
-        <option value="half">Carga Média</option>
-        <option value="full" selected>Carga Total (CM Alto)</option>
-      </select>
-    </div>
-
-    <div class="info-box">
-      Altura do CM (h<sub>CM</sub>): <strong id="cmHeightValue">0.0</strong>m<br>
-      Base de Apoio Usada: <strong id="baseWidthValue">0.0</strong>m<br>
-      Ângulo Limite Teórico: <strong id="criticalAngleValue">0°</strong>
-    </div>
-
-    <div id="status">Estado: Estável</div>
+<div id="ui">
+  <div class="control-group">
+    <div class="lbl">Compartimentos (vista traseira do baú)</div>
+    <div class="cols"><span>Esquerda</span><span>Centro</span><span>Direita</span></div>
+    <div id="grid"></div>
   </div>
 
+  <div class="control-group">
+    <label for="preset">Predefinição de carga:</label>
+    <select id="preset">
+      <option value="custom">Personalizada (clique na grade)</option>
+      <option value="8" selected>Direita embaixo</option>
+      <option value="0">Esquerda em cima</option>
+      <option value="1">Centro em cima</option>
+      <option value="7">Centro embaixo</option>
+      <option value="4">Centro (meio)</option>
+      <option value="2,5,8">Coluna direita</option>
+      <option value="0,3,6">Coluna esquerda</option>
+      <option value="0,1,2">Linha de cima</option>
+      <option value="6,7,8">Linha de baixo</option>
+      <option value="0,1,2,3,4,5,6,7,8">Tudo cheio</option>
+      <option value="none">Vazio</option>
+    </select>
+  </div>
+
+  <div class="control-group">
+    <label for="cellMass">Peso por compartimento:</label>
+    <select id="cellMass">
+      <option value="1">Leve</option>
+      <option value="2" selected>Médio</option>
+      <option value="4">Pesado</option>
+    </select>
+  </div>
+
+  <div class="control-group">
+    <label for="tiltDirection">Eixo de inclinação:</label>
+    <select id="tiltDirection">
+      <option value="side" selected>Lateral (capotamento)</option>
+      <option value="front">Frontal (subida)</option>
+    </select>
+  </div>
+
+  <div class="control-group" id="sideGroup">
+    <label for="sideDir">Lado que desce:</label>
+    <select id="sideDir">
+      <option value="1" selected>Direito</option>
+      <option value="-1">Esquerdo</option>
+    </select>
+  </div>
+
+  <div class="control-group">
+    <label for="rampAngle"><span>Inclinação da rampa:</span><span id="angleValue">0°</span></label>
+    <input type="range" id="rampAngle" min="0" max="60" value="0" step="0.5">
+  </div>
+
+  <div class="row">
+    <button id="viewRear">Ver por trás</button>
+    <button id="viewSide">Ver lateral</button>
+  </div>
+
+  <div class="info-box">
+    Altura do CM: <strong id="cmH">0</strong> m<br>
+    Posição lateral do CM: <strong id="cmZ">0</strong><br>
+    Distância CM → ponto de tombo: <strong id="distV">0</strong> m<br>
+    Ângulo limite teórico: <strong id="critV">0°</strong>
+  </div>
+  <div id="status">Estado: Estável</div>
+</div>
+
 <script>
-  const container = document.getElementById('canvas-container');
+const container = document.getElementById('canvas-container');
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1e1e24);
+const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+camera.position.set(14, 9, 16);
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(container.clientWidth, container.clientHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+container.appendChild(renderer.domElement);
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.target.set(0, 1.5, 0);
 
-  // 1. Cena e Câmera
-  const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x1e1e24);
+scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+const dl = new THREE.DirectionalLight(0xffffff, 0.8);
+dl.position.set(10, 20, 10);
+scene.add(dl);
 
-  const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
-  camera.position.set(14, 9, 16);
+// Rampa
+const rampGroup = new THREE.Group();
+scene.add(rampGroup);
+const ramp = new THREE.Mesh(new THREE.BoxGeometry(16, 0.4, 12), new THREE.MeshStandardMaterial({ color: 0x444444 }));
+ramp.position.set(0, -0.2, 0);
+rampGroup.add(ramp);
 
-  const renderer = new THREE.WebGLRenderer({ antialias: true });
+// Caminhão
+const truckGroup = new THREE.Group();
+rampGroup.add(truckGroup);
+function add(mesh, x, y, z) { mesh.position.set(x, y, z); truckGroup.add(mesh); return mesh; }
+
+add(new THREE.Mesh(new THREE.BoxGeometry(7, 0.4, 3), new THREE.MeshStandardMaterial({ color: 0x222222 })), 0, 0.6, 0);
+const wheelGeo = new THREE.CylinderGeometry(0.5, 0.5, 0.4, 16);
+wheelGeo.rotateX(Math.PI / 2);
+const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
+[[-2,.5,1.5],[-2,.5,-1.5],[2,.5,1.5],[2,.5,-1.5]].forEach(p => add(new THREE.Mesh(wheelGeo, wheelMat), ...p));
+add(new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2.8), new THREE.MeshStandardMaterial({ color: 0xd90429 })), 2.2, 1.8, 0);
+add(new THREE.Mesh(new THREE.BoxGeometry(4.5, 3, 2.8),
+  new THREE.MeshStandardMaterial({ color: 0xedf2f4, transparent: true, opacity: 0.12, depthWrite: false })), -1.2, 2.3, 0);
+
+// 9 compartimentos: índice = linha*3 + coluna (linha 0 = topo, coluna 0 = esquerda; direita = +z)
+const CELL_Y = [3.3, 2.3, 1.3];
+const CELL_Z = [-0.933, 0, 0.933];
+const CELL_X = -1.2;
+const cellFill = [];
+const edgeGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(4.5, 1, 0.933));
+for (let i = 0; i < 9; i++) {
+  const r = Math.floor(i / 3), c = i % 3;
+  const edges = new THREE.LineSegments(edgeGeo, new THREE.LineBasicMaterial({ color: 0x9aa0c0 }));
+  add(edges, CELL_X, CELL_Y[r], CELL_Z[c]);
+  const fill = new THREE.Mesh(new THREE.BoxGeometry(4.2, 0.85, 0.8), new THREE.MeshStandardMaterial({ color: 0xf77f00 }));
+  add(fill, CELL_X, CELL_Y[r], CELL_Z[c]);
+  cellFill.push(fill);
+}
+
+// Centro de massa e gravidade
+const cmMesh = new THREE.Mesh(new THREE.SphereGeometry(0.25, 16, 16), new THREE.MeshBasicMaterial({ color: 0xffff00, depthTest: false }));
+cmMesh.renderOrder = 10;
+truckGroup.add(cmMesh);
+const gravityLineMat = new THREE.LineDashedMaterial({ color: 0x06d6a0, dashSize: 0.2, gapSize: 0.1 });
+const gravityLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(0,-10,0)]), gravityLineMat);
+gravityLine.computeLineDistances();
+scene.add(gravityLine);
+
+// UI
+const $ = id => document.getElementById(id);
+const loaded = Array(9).fill(false);
+const gridEl = $('grid');
+const nomesLinha = ['Topo', 'Meio', 'Base'];
+const buttons = [];
+for (let i = 0; i < 9; i++) {
+  const b = document.createElement('button');
+  b.className = 'cell';
+  b.textContent = nomesLinha[Math.floor(i / 3)];
+  b.addEventListener('click', () => { loaded[i] = !loaded[i]; $('preset').value = 'custom'; update(); });
+  gridEl.appendChild(b);
+  buttons.push(b);
+}
+
+function applyPreset(v) {
+  if (v === 'custom') return;
+  loaded.fill(false);
+  if (v !== 'none') v.split(',').forEach(n => loaded[+n] = true);
+}
+
+const TRUCK_MASS = 6, TRUCK_CM = { x: -0.2, y: 1.1, z: 0 };
+const HALF_SIDE = 1.5, REAR_AXLE_X = -2;
+
+function update() {
+  const angleDeg = parseFloat($('rampAngle').value);
+  const tiltDir = $('tiltDirection').value;
+  const s = parseFloat($('sideDir').value);
+  const m = parseFloat($('cellMass').value);
+  $('sideGroup').style.display = tiltDir === 'side' ? '' : 'none';
+
+  // Centro de massa ponderado
+  let M = TRUCK_MASS, sx = TRUCK_MASS * TRUCK_CM.x, sy = TRUCK_MASS * TRUCK_CM.y, sz = 0;
+  for (let i = 0; i < 9; i++) {
+    cellFill[i].visible = loaded[i];
+    buttons[i].classList.toggle('on', loaded[i]);
+    if (loaded[i]) {
+      M += m; sx += m * CELL_X; sy += m * CELL_Y[Math.floor(i / 3)]; sz += m * CELL_Z[i % 3];
+    }
+  }
+  const xc = sx / M, yc = sy / M, zc = sz / M;
+  cmMesh.position.set(xc, yc, zc);
+
+  // Distância horizontal até a aresta de tombamento
+  let dist;
+  if (tiltDir === 'side') dist = HALF_SIDE - s * zc;
+  else dist = xc - REAR_AXLE_X;
+  const critDeg = Math.atan(dist / yc) * 180 / Math.PI;
+
+  $('angleValue').textContent = angleDeg.toFixed(1) + '°';
+  $('cmH').textContent = yc.toFixed(2);
+  const lado = Math.abs(zc) < 0.02 ? 'centrado' : (zc > 0 ? 'direita ' : 'esquerda ') + Math.abs(zc).toFixed(2) + ' m';
+  $('cmZ').textContent = lado;
+  $('distV').textContent = dist.toFixed(2);
+  $('critV').textContent = critDeg.toFixed(1) + '°';
+
+  rampGroup.rotation.set(0, 0, 0);
+  truckGroup.rotation.set(0, 0, 0);
+  const a = THREE.MathUtils.degToRad(angleDeg);
+  if (tiltDir === 'side') rampGroup.rotation.x = s * a; else rampGroup.rotation.z = a;
+
+  const st = $('status');
+  if (angleDeg < critDeg) {
+    gravityLineMat.color.setHex(0x06d6a0);
+    st.textContent = 'Estado: Estável';
+    st.style.color = '#06d6a0';
+  } else {
+    gravityLineMat.color.setHex(0xef476f);
+    st.textContent = `Estado: TOMBOU! (Limite: ${critDeg.toFixed(1)}°)`;
+    st.style.color = '#ef476f';
+    const extra = THREE.MathUtils.degToRad(angleDeg - critDeg);
+    if (tiltDir === 'side') truckGroup.rotation.x = s * extra * 2; else truckGroup.rotation.z = -extra * 2;
+  }
+
+  // Gravidade a partir do CM (após aplicar as rotações)
+  scene.updateMatrixWorld(true);
+  const w = new THREE.Vector3();
+  cmMesh.getWorldPosition(w);
+  gravityLine.position.copy(w);
+}
+
+$('preset').addEventListener('change', e => { applyPreset(e.target.value); update(); });
+['rampAngle', 'cellMass', 'tiltDirection', 'sideDir'].forEach(id => $(id).addEventListener('input', update));
+$('viewRear').addEventListener('click', () => { camera.position.set(-20, 6, 0); controls.target.set(0, 1.5, 0); });
+$('viewSide').addEventListener('click', () => { camera.position.set(14, 9, 16); controls.target.set(0, 1.5, 0); });
+
+window.addEventListener('resize', () => {
+  camera.aspect = container.clientWidth / container.clientHeight;
+  camera.updateProjectionMatrix();
   renderer.setSize(container.clientWidth, container.clientHeight);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Otimização para telas Retina/Celular
-  renderer.shadowMap.enabled = true;
-  container.appendChild(renderer.domElement);
+});
 
-  const controls = new THREE.OrbitControls(camera, renderer.domElement);
-  controls.enableDamping = true;
-
-  // 2. Iluminação
-  scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-  const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-  dirLight.position.set(10, 20, 10);
-  dirLight.castShadow = true;
-  scene.add(dirLight);
-
-  // 3. Rampa
-  const rampGroup = new THREE.Group();
-  scene.add(rampGroup);
-
-  const rampGeo = new THREE.BoxGeometry(16, 0.4, 12);
-  const rampMat = new THREE.MeshStandardMaterial({ color: 0x444444 });
-  const ramp = new THREE.Mesh(rampGeo, rampMat);
-  ramp.position.set(0, -0.2, 0);
-  ramp.receiveShadow = true;
-  rampGroup.add(ramp);
-
-  // 4. Construção do Caminhão 3D
-  const truckGroup = new THREE.Group();
-  rampGroup.add(truckGroup);
-
-  // Chassi
-  const chassisGeo = new THREE.BoxGeometry(7, 0.4, 3);
-  const chassisMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
-  const chassis = new THREE.Mesh(chassisGeo, chassisMat);
-  chassis.position.set(0, 0.6, 0);
-  truckGroup.add(chassis);
-
-  // Rodas
-  const wheelGeo = new THREE.CylinderGeometry(0.5, 0.5, 0.4, 16);
-  const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
-  wheelGeo.rotateX(Math.PI / 2);
-
-  const wheelPositions = [
-    [-2, 0.5, 1.5], [-2, 0.5, -1.5],
-    [2, 0.5, 1.5], [2, 0.5, -1.5]
-  ];
-  wheelPositions.forEach(pos => {
-    const wheel = new THREE.Mesh(wheelGeo, wheelMat);
-    wheel.position.set(...pos);
-    truckGroup.add(wheel);
-  });
-
-  // Cabine
-  const cabinGeo = new THREE.BoxGeometry(2, 2, 2.8);
-  const cabinMat = new THREE.MeshStandardMaterial({ color: 0xd90429 });
-  const cabin = new THREE.Mesh(cabinGeo, cabinMat);
-  cabin.position.set(2.2, 1.8, 0);
-  truckGroup.add(cabin);
-
-  // Baú de Carga
-  const trunkGeo = new THREE.BoxGeometry(4.5, 3, 2.8);
-  const trunkMat = new THREE.MeshStandardMaterial({ color: 0xedf2f4, transparent: true, opacity: 0.6 });
-  const trunk = new THREE.Mesh(trunkGeo, trunkMat);
-  trunk.position.set(-1.2, 2.3, 0);
-  truckGroup.add(trunk);
-
-  // Carga interna visível
-  const cargoGeo = new THREE.BoxGeometry(4.3, 1, 2.6);
-  const cargoMat = new THREE.MeshStandardMaterial({ color: 0xf77f00 });
-  const cargoMesh = new THREE.Mesh(cargoGeo, cargoMat);
-  cargoMesh.position.set(-1.2, 1.3, 0);
-  truckGroup.add(cargoMesh);
-
-  // Esfera do Centro de Massa (CM)
-  const cmGeo = new THREE.SphereGeometry(0.25, 16, 16);
-  const cmMat = new THREE.MeshBasicMaterial({ color: 0xffff00 });
-  const cmMesh = new THREE.Mesh(cmGeo, cmMat);
-  truckGroup.add(cmMesh);
-
-  // Vetor Gravidade (Linha que desce do CM)
-  const gravityLineGeo = new THREE.BufferGeometry().setFromPoints([
-    new THREE.Vector3(0, 0, 0),
-    new THREE.Vector3(0, -10, 0)
-  ]);
-  const gravityLineMat = new THREE.LineDashedMaterial({ 
-    color: 0x06d6a0, 
-    dashSize: 0.2, 
-    gapSize: 0.1 
-  });
-  const gravityLine = new THREE.Line(gravityLineGeo, gravityLineMat);
-  gravityLine.computeLineDistances();
-  scene.add(gravityLine);
-
-  // 5. Controles e Lógica Física
-  const rampAngleInput = document.getElementById('rampAngle');
-  const cargoStateSelect = document.getElementById('cargoState');
-  const tiltDirectionSelect = document.getElementById('tiltDirection');
-
-  const angleLabel = document.getElementById('angleValue');
-  const cmHeightLabel = document.getElementById('cmHeightValue');
-  const baseWidthLabel = document.getElementById('baseWidthValue');
-  const criticalAngleLabel = document.getElementById('criticalAngleValue');
-  const statusLabel = document.getElementById('status');
-
-  const halfWidthSide = 1.5;  // Metade da distância entre as rodas nas laterais
-  const halfWidthFront = 2.0; // Metade da distância entre os eixos dianteiro e traseiro
-
-  function update() {
-    const angleDeg = parseFloat(rampAngleInput.value);
-    const cargoState = cargoStateSelect.value;
-    const tiltDir = tiltDirectionSelect.value;
-
-    let cmHeight = 1.1; // Vazio
-    if (cargoState === 'half') {
-      cmHeight = 1.8;
-      cargoMesh.visible = true;
-      cargoMesh.scale.set(1, 1, 1);
-      cargoMesh.position.y = 1.3;
-    } else if (cargoState === 'full') {
-      cmHeight = 2.5; // Cheio
-      cargoMesh.visible = true;
-      cargoMesh.scale.set(1, 2.5, 1);
-      cargoMesh.position.y = 2.05;
-    } else {
-      cargoMesh.visible = false;
-    }
-
-    // Posição do CM no caminhão
-    cmMesh.position.set(-0.2, cmHeight, 0);
-
-    // Seleção do apoio conforme direção
-    const halfBase = (tiltDir === 'side') ? halfWidthSide : halfWidthFront;
-    baseWidthLabel.textContent = (halfBase * 2).toFixed(1);
-
-    // Cálculo do Ângulo Crítico
-    const criticalAngleRad = Math.atan(halfBase / cmHeight);
-    const criticalAngleDeg = (criticalAngleRad * 180) / Math.PI;
-
-    angleLabel.textContent = `${angleDeg.toFixed(1)}°`;
-    cmHeightLabel.textContent = cmHeight.toFixed(2);
-    criticalAngleLabel.textContent = `${criticalAngleDeg.toFixed(1)}°`;
-
-    // Reseta Rotações
-    rampGroup.rotation.set(0, 0, 0);
-    truckGroup.rotation.set(0, 0, 0);
-
-    const angleRad = THREE.MathUtils.degToRad(angleDeg);
-
-    if (tiltDir === 'side') {
-      rampGroup.rotation.x = angleRad;
-    } else {
-      rampGroup.rotation.z = angleRad;
-    }
-
-    // Atualiza o vetor da gravidade
-    const cmWorldPos = new THREE.Vector3();
-    cmMesh.getWorldPosition(cmWorldPos);
-    gravityLine.position.copy(cmWorldPos);
-
-    // Validação de Tombo
-    if (angleDeg < criticalAngleDeg) {
-      gravityLineMat.color.setHex(0x06d6a0); // Verde
-      statusLabel.textContent = "Estado: Estável";
-      statusLabel.style.color = "#06d6a0";
-    } else {
-      gravityLineMat.color.setHex(0xef476f); // Vermelho
-      statusLabel.textContent = `Estado: TOMBOU! (Limite: ${criticalAngleDeg.toFixed(1)}°)`;
-      statusLabel.style.color = "#ef476f";
-
-      const extraAngle = THREE.MathUtils.degToRad(angleDeg - criticalAngleDeg);
-      if (tiltDir === 'side') {
-        truckGroup.rotation.x = extraAngle * 2;
-      } else {
-        truckGroup.rotation.z = -extraAngle * 2;
-      }
-    }
-  }
-
-  rampAngleInput.addEventListener('input', update);
-  cargoStateSelect.addEventListener('change', update);
-  tiltDirectionSelect.addEventListener('change', update);
-
-  function animate() {
-    requestAnimationFrame(animate);
-    controls.update();
-    renderer.render(scene, camera);
-  }
-
-  // Redimensionamento responsivo dinâmico
-  window.addEventListener('resize', () => {
-    camera.aspect = container.clientWidth / container.clientHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(container.clientWidth, container.clientHeight);
-  });
-
-  update();
-  animate();
+function animate() { requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); }
+applyPreset($('preset').value);
+update();
+animate();
 </script>
 </body>
 </html>
