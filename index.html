@@ -2,15 +2,21 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Caminhão 3D - Centro de Massa (UniBH)</title>
 <style>
   * { box-sizing: border-box; }
   body, html { margin:0; padding:0; width:100%; height:100%; overflow:hidden; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; background:#1e1e24; color:#fff; display:flex; flex-direction:column; }
+  body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
   #canvas-container { flex:1; width:100%; height:100%; position:relative; touch-action:none; }
-  #ui { background:rgba(18,18,22,.95); backdrop-filter:blur(8px); padding:16px; z-index:10; box-shadow:0 -4px 20px rgba(0,0,0,.5); overflow-y:auto; max-height:55vh; }
+  #ui, #calc { background:rgba(18,18,22,.95); backdrop-filter:blur(8px); padding:16px; z-index:10; overflow-y:auto; }
+  #ui { box-shadow:0 -4px 20px rgba(0,0,0,.5); max-height:55vh; }
+  #calc { display:none; font-size:.85em; }
+  #calc.open { display:block; position:absolute; top:env(safe-area-inset-top, 0px); left:0; right:0; height:45vh; z-index:20; }
   @media (min-width:768px) {
     #ui { position:absolute; top:20px; left:20px; width:330px; max-height:calc(100vh - 40px); border-radius:12px; border:1px solid rgba(255,255,255,.1); }
+    #calc, #calc.open { display:block; position:absolute; top:20px; right:20px; left:auto; height:auto; width:460px; max-height:calc(100vh - 40px); border-radius:12px; border:1px solid rgba(255,255,255,.1); }
+    #toggleCalc { display:none; }
   }
   .control-group { margin-bottom:12px; }
   label, .lbl { display:flex; justify-content:space-between; margin-bottom:6px; font-size:.9em; font-weight:500; color:#ddd; }
@@ -22,8 +28,23 @@
   .cell { height:46px; border-radius:8px; border:1px solid #555; background:#2b2b36; color:#aaa; font-size:.75em; cursor:pointer; }
   .cell.on { background:#f77f00; border-color:#ffb347; color:#fff; font-weight:bold; }
   .cols { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; max-width:210px; margin:0 auto 4px; font-size:.72em; color:#999; text-align:center; }
-  .row { display:flex; gap:8px; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; }
+  .row button { min-width:90px; }
+  .row button#resetAll { background:#8d2b3f; border-color:#ef476f; }
   .row button { flex:1; height:36px; background:#2b2b36; color:#fff; border:1px solid #444; border-radius:8px; cursor:pointer; }
+  /* painel de cálculos */
+  #calc h3 { margin:14px 0 6px; font-size:.95em; color:#ffd166; }
+  #calc h3:first-child { margin-top:0; }
+  .f { background:rgba(255,255,255,.05); border-radius:8px; padding:8px 10px; margin-bottom:6px; line-height:1.7; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:.9em; color:#ddd; }
+  .f b { color:#06d6a0; }
+  .tw { overflow-x:auto; }
+  table { border-collapse:collapse; width:100%; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:.78em; }
+  th, td { padding:4px 6px; text-align:right; border-bottom:1px solid rgba(255,255,255,.08); white-space:nowrap; }
+  th { color:#9aa0c0; font-weight:600; }
+  td:first-child, th:first-child { text-align:left; }
+  tr.tot td { font-weight:bold; color:#ffd166; border-top:1px solid #ffd166; }
+  .res td:last-child { color:#fff; font-weight:bold; }
+  .neg { color:#ef476f !important; }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -89,6 +110,8 @@
   <div class="row">
     <button id="viewRear">Ver por trás</button>
     <button id="viewSide">Ver lateral</button>
+    <button id="toggleCalc">Cálculos</button>
+    <button id="resetAll">Resetar</button>
   </div>
 
   <div class="info-box">
@@ -98,6 +121,27 @@
     Ângulo limite teórico: <strong id="critV">0°</strong>
   </div>
   <div id="status">Estado: Estável</div>
+</div>
+
+<div id="calc">
+  <h3>1) Centro de massa</h3>
+  <div class="f">x<sub>cm</sub> = Σ(m·x) / M<br>y<sub>cm</sub> = Σ(m·y) / M<br>z<sub>cm</sub> = Σ(m·z) / M</div>
+  <div class="f" id="cmSubst"></div>
+
+  <h3>2) Momento de inércia (massas pontuais)</h3>
+  <div class="f">I<sub>cm</sub> = Σ m·d²  (d = distância ao eixo que passa pelo CM)<br>I<sub>aresta</sub> = I<sub>cm</sub> + M·D²  (Steiner)<br>D² = dist² + y<sub>cm</sub>²  (CM → aresta de tombo)</div>
+  <div class="f" id="inSubst"></div>
+
+  <h3>3) Tombamento</h3>
+  <div class="f">θ<sub>crit</sub> = arctan(dist / y<sub>cm</sub>)<br>τ<sub>rest</sub> = M·g·(dist·cosθ − y<sub>cm</sub>·senθ)<br>τ &lt; 0 → o peso passa da aresta e tomba</div>
+  <div class="f" id="tipSubst"></div>
+
+  <h3>Tabela de cálculo</h3>
+  <div class="tw"><table id="tbl"></table></div>
+
+  <h3>Resultados</h3>
+  <div class="tw"><table id="res" class="res"></table></div>
+  <div class="info-box">Massas em unidades relativas (u); cada compartimento é tratado como massa pontual no seu centro; g = 9,81 m/s². Eixo lateral: d² = (y−y<sub>cm</sub>)² + (z−z<sub>cm</sub>)². Eixo frontal: d² = (x−x<sub>cm</sub>)² + (y−y<sub>cm</sub>)².</div>
 </div>
 
 <script>
@@ -119,14 +163,12 @@ const dl = new THREE.DirectionalLight(0xffffff, 0.8);
 dl.position.set(10, 20, 10);
 scene.add(dl);
 
-// Rampa
 const rampGroup = new THREE.Group();
 scene.add(rampGroup);
 const ramp = new THREE.Mesh(new THREE.BoxGeometry(16, 0.4, 12), new THREE.MeshStandardMaterial({ color: 0x444444 }));
 ramp.position.set(0, -0.2, 0);
 rampGroup.add(ramp);
 
-// Caminhão
 const truckGroup = new THREE.Group();
 rampGroup.add(truckGroup);
 function add(mesh, x, y, z) { mesh.position.set(x, y, z); truckGroup.add(mesh); return mesh; }
@@ -140,7 +182,6 @@ add(new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2.8), new THREE.MeshStandardMater
 add(new THREE.Mesh(new THREE.BoxGeometry(4.5, 3, 2.8),
   new THREE.MeshStandardMaterial({ color: 0xedf2f4, transparent: true, opacity: 0.12, depthWrite: false })), -1.2, 2.3, 0);
 
-// 9 compartimentos: índice = linha*3 + coluna (linha 0 = topo, coluna 0 = esquerda; direita = +z)
 const CELL_Y = [3.3, 2.3, 1.3];
 const CELL_Z = [-0.933, 0, 0.933];
 const CELL_X = -1.2;
@@ -155,7 +196,6 @@ for (let i = 0; i < 9; i++) {
   cellFill.push(fill);
 }
 
-// Centro de massa e gravidade
 const cmMesh = new THREE.Mesh(new THREE.SphereGeometry(0.25, 16, 16), new THREE.MeshBasicMaterial({ color: 0xffff00, depthTest: false }));
 cmMesh.renderOrder = 10;
 truckGroup.add(cmMesh);
@@ -164,11 +204,11 @@ const gravityLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new
 gravityLine.computeLineDistances();
 scene.add(gravityLine);
 
-// UI
 const $ = id => document.getElementById(id);
 const loaded = Array(9).fill(false);
 const gridEl = $('grid');
 const nomesLinha = ['Topo', 'Meio', 'Base'];
+const nomesCol = ['E', 'C', 'D'];
 const buttons = [];
 for (let i = 0; i < 9; i++) {
   const b = document.createElement('button');
@@ -186,7 +226,9 @@ function applyPreset(v) {
 }
 
 const TRUCK_MASS = 6, TRUCK_CM = { x: -0.2, y: 1.1, z: 0 };
-const HALF_SIDE = 1.5, REAR_AXLE_X = -2;
+const HALF_SIDE = 1.5, REAR_AXLE_X = -2, G = 9.81;
+const f2 = v => (Math.abs(v) < 0.005 ? 0 : v).toFixed(2);
+const f3 = v => (Math.abs(v) < 0.0005 ? 0 : v).toFixed(3);
 
 function update() {
   const angleDeg = parseFloat($('rampAngle').value);
@@ -195,19 +237,21 @@ function update() {
   const m = parseFloat($('cellMass').value);
   $('sideGroup').style.display = tiltDir === 'side' ? '' : 'none';
 
-  // Centro de massa ponderado
+  // itens: caminhão + compartimentos carregados
+  const items = [{ n: 'Caminhão', m: TRUCK_MASS, x: TRUCK_CM.x, y: TRUCK_CM.y, z: TRUCK_CM.z }];
   let M = TRUCK_MASS, sx = TRUCK_MASS * TRUCK_CM.x, sy = TRUCK_MASS * TRUCK_CM.y, sz = 0;
   for (let i = 0; i < 9; i++) {
     cellFill[i].visible = loaded[i];
     buttons[i].classList.toggle('on', loaded[i]);
     if (loaded[i]) {
-      M += m; sx += m * CELL_X; sy += m * CELL_Y[Math.floor(i / 3)]; sz += m * CELL_Z[i % 3];
+      const r = Math.floor(i / 3), c = i % 3;
+      M += m; sx += m * CELL_X; sy += m * CELL_Y[r]; sz += m * CELL_Z[c];
+      items.push({ n: nomesLinha[r] + '-' + nomesCol[c], m, x: CELL_X, y: CELL_Y[r], z: CELL_Z[c] });
     }
   }
   const xc = sx / M, yc = sy / M, zc = sz / M;
   cmMesh.position.set(xc, yc, zc);
 
-  // Distância horizontal até a aresta de tombamento
   let dist;
   if (tiltDir === 'side') dist = HALF_SIDE - s * zc;
   else dist = xc - REAR_AXLE_X;
@@ -238,17 +282,75 @@ function update() {
     if (tiltDir === 'side') truckGroup.rotation.x = s * extra * 2; else truckGroup.rotation.z = -extra * 2;
   }
 
-  // Gravidade a partir do CM (após aplicar as rotações)
   scene.updateMatrixWorld(true);
   const w = new THREE.Vector3();
   cmMesh.getWorldPosition(w);
   gravityLine.position.copy(w);
+
+  renderCalc(items, M, sx, sy, sz, xc, yc, zc, dist, critDeg, angleDeg, tiltDir);
+}
+
+function renderCalc(items, M, sx, sy, sz, xc, yc, zc, dist, critDeg, angleDeg, tiltDir) {
+  const th = angleDeg * Math.PI / 180;
+  const lateral = tiltDir === 'side';
+  let Icm = 0, rows = '';
+  items.forEach(it => {
+    const d2 = lateral ? (it.y - yc) ** 2 + (it.z - zc) ** 2 : (it.x - xc) ** 2 + (it.y - yc) ** 2;
+    const md2 = it.m * d2;
+    Icm += md2;
+    rows += `<tr><td>${it.n}</td><td>${f2(it.m)}</td><td>${f2(it.x)}</td><td>${f2(it.y)}</td><td>${f2(it.z)}</td><td>${f2(it.m * it.x)}</td><td>${f2(it.m * it.y)}</td><td>${f2(it.m * it.z)}</td><td>${f3(d2)}</td><td>${f3(md2)}</td></tr>`;
+  });
+  rows += `<tr class="tot"><td>Σ</td><td>${f2(M)}</td><td></td><td></td><td></td><td>${f2(sx)}</td><td>${f2(sy)}</td><td>${f2(sz)}</td><td></td><td>${f3(Icm)}</td></tr>`;
+  $('tbl').innerHTML = '<tr><th>Item</th><th>m</th><th>x</th><th>y</th><th>z</th><th>m·x</th><th>m·y</th><th>m·z</th><th>d²</th><th>m·d²</th></tr>' + rows;
+
+  const D2 = dist * dist + yc * yc;
+  const Iedge = Icm + M * D2;
+  const tau = M * G * (dist * Math.cos(th) - yc * Math.sin(th));
+  const margem = critDeg - angleDeg;
+
+  $('cmSubst').innerHTML =
+    `x<sub>cm</sub> = <b>${f2(sx)}</b> / ${f2(M)} = <b>${f3(xc)}</b> m<br>` +
+    `y<sub>cm</sub> = <b>${f2(sy)}</b> / ${f2(M)} = <b>${f3(yc)}</b> m<br>` +
+    `z<sub>cm</sub> = <b>${f2(sz)}</b> / ${f2(M)} = <b>${f3(zc)}</b> m`;
+  $('inSubst').innerHTML =
+    `Eixo: ${lateral ? 'longitudinal (x), tombo lateral' : 'transversal (z), tombo frontal'}<br>` +
+    `I<sub>cm</sub> = <b>${f3(Icm)}</b> u·m²<br>` +
+    `D² = ${f3(dist)}² + ${f3(yc)}² = <b>${f3(D2)}</b> m²<br>` +
+    `I<sub>aresta</sub> = ${f3(Icm)} + ${f2(M)}·${f3(D2)} = <b>${f3(Iedge)}</b> u·m²`;
+  $('tipSubst').innerHTML =
+    `θ<sub>crit</sub> = arctan(${f3(dist)} / ${f3(yc)}) = <b>${critDeg.toFixed(2)}°</b><br>` +
+    `τ<sub>rest</sub> = ${f2(M)}·9,81·(${f3(dist)}·cos ${angleDeg.toFixed(1)}° − ${f3(yc)}·sen ${angleDeg.toFixed(1)}°)<br>` +
+    `= <b class="${tau < 0 ? 'neg' : ''}">${f2(tau)}</b> u·m²/s²`;
+
+  const cls = v => v < 0 ? ' class="neg"' : '';
+  $('res').innerHTML =
+    `<tr><td>Massa total M</td><td>${f2(M)} u</td></tr>` +
+    `<tr><td>Centro de massa (x, y, z)</td><td>(${f2(xc)}; ${f2(yc)}; ${f2(zc)}) m</td></tr>` +
+    `<tr><td>Distância à aresta (dist)</td><td>${f3(dist)} m</td></tr>` +
+    `<tr><td>I<sub>cm</sub></td><td>${f3(Icm)} u·m²</td></tr>` +
+    `<tr><td>I<sub>aresta</sub></td><td>${f3(Iedge)} u·m²</td></tr>` +
+    `<tr><td>Ângulo atual θ</td><td>${angleDeg.toFixed(1)}°</td></tr>` +
+    `<tr><td>Ângulo crítico</td><td>${critDeg.toFixed(2)}°</td></tr>` +
+    `<tr><td>Margem (θ<sub>crit</sub> − θ)</td><td${cls(margem)}>${margem.toFixed(2)}°</td></tr>` +
+    `<tr><td>Torque restaurador</td><td${cls(tau)}>${f2(tau)} u·m²/s²</td></tr>`;
 }
 
 $('preset').addEventListener('change', e => { applyPreset(e.target.value); update(); });
 ['rampAngle', 'cellMass', 'tiltDirection', 'sideDir'].forEach(id => $(id).addEventListener('input', update));
 $('viewRear').addEventListener('click', () => { camera.position.set(-20, 6, 0); controls.target.set(0, 1.5, 0); });
 $('viewSide').addEventListener('click', () => { camera.position.set(14, 9, 16); controls.target.set(0, 1.5, 0); });
+$('toggleCalc').addEventListener('click', () => $('calc').classList.toggle('open'));
+$('resetAll').addEventListener('click', () => {
+  $('preset').value = '8';
+  $('cellMass').value = '2';
+  $('tiltDirection').value = 'side';
+  $('sideDir').value = '1';
+  $('rampAngle').value = '0';
+  applyPreset('8');
+  camera.position.set(14, 9, 16);
+  controls.target.set(0, 1.5, 0);
+  update();
+});
 
 window.addEventListener('resize', () => {
   camera.aspect = container.clientWidth / container.clientHeight;
