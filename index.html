@@ -80,9 +80,9 @@
   <div class="control-group">
     <label for="cellMass">Peso por compartimento:</label>
     <select id="cellMass">
-      <option value="1">Leve</option>
-      <option value="2" selected>Médio</option>
-      <option value="4">Pesado</option>
+      <option value="1000">Leve (1000 kg)</option>
+      <option value="2000" selected>Médio (2000 kg)</option>
+      <option value="4000">Pesado (4000 kg)</option>
     </select>
   </div>
 
@@ -141,7 +141,7 @@
 
   <h3>Resultados</h3>
   <div class="tw"><table id="res" class="res"></table></div>
-  <div class="info-box">Massas em unidades relativas (u); cada compartimento é tratado como massa pontual no seu centro; g = 9,81 m/s². Eixo lateral: d² = (y−y<sub>cm</sub>)² + (z−z<sub>cm</sub>)². Eixo frontal: d² = (x−x<sub>cm</sub>)² + (y−y<sub>cm</sub>)².</div>
+  <div class="info-box">Massas em kg (caminhão 6000 kg; compartimento 1000, 2000 ou 4000 kg); I em kg·m² e τ em N·m. Cada compartimento é tratado como massa pontual no seu centro; g = 9,81 m/s². Eixo lateral: d² = (y−y<sub>cm</sub>)² + (z−z<sub>cm</sub>)². Eixo frontal: d² = (x−x<sub>cm</sub>)² + (y−y<sub>cm</sub>)².</div>
 </div>
 
 <script>
@@ -225,7 +225,7 @@ function applyPreset(v) {
   if (v !== 'none') v.split(',').forEach(n => loaded[+n] = true);
 }
 
-const TRUCK_MASS = 6, TRUCK_CM = { x: -0.2, y: 1.1, z: 0 };
+const TRUCK_MASS = 6000, TRUCK_CM = { x: -0.2, y: 1.1, z: 0 };
 const HALF_SIDE = 1.5, REAR_AXLE_X = -2, G = 9.81;
 const f2 = v => (Math.abs(v) < 0.005 ? 0 : v).toFixed(2);
 const f3 = v => (Math.abs(v) < 0.0005 ? 0 : v).toFixed(3);
@@ -301,7 +301,7 @@ function renderCalc(items, M, sx, sy, sz, xc, yc, zc, dist, critDeg, angleDeg, t
     rows += `<tr><td>${it.n}</td><td>${f2(it.m)}</td><td>${f2(it.x)}</td><td>${f2(it.y)}</td><td>${f2(it.z)}</td><td>${f2(it.m * it.x)}</td><td>${f2(it.m * it.y)}</td><td>${f2(it.m * it.z)}</td><td>${f3(d2)}</td><td>${f3(md2)}</td></tr>`;
   });
   rows += `<tr class="tot"><td>Σ</td><td>${f2(M)}</td><td></td><td></td><td></td><td>${f2(sx)}</td><td>${f2(sy)}</td><td>${f2(sz)}</td><td></td><td>${f3(Icm)}</td></tr>`;
-  $('tbl').innerHTML = '<tr><th>Item</th><th>m</th><th>x</th><th>y</th><th>z</th><th>m·x</th><th>m·y</th><th>m·z</th><th>d²</th><th>m·d²</th></tr>' + rows;
+  $('tbl').innerHTML = '<tr><th>Item</th><th>m (kg)</th><th>x</th><th>y</th><th>z</th><th>m·x</th><th>m·y</th><th>m·z</th><th>d²</th><th>m·d²</th></tr>' + rows;
 
   const D2 = dist * dist + yc * yc;
   const Iedge = Icm + M * D2;
@@ -314,25 +314,25 @@ function renderCalc(items, M, sx, sy, sz, xc, yc, zc, dist, critDeg, angleDeg, t
     `z<sub>cm</sub> = <b>${f2(sz)}</b> / ${f2(M)} = <b>${f3(zc)}</b> m`;
   $('inSubst').innerHTML =
     `Eixo: ${lateral ? 'longitudinal (x), tombo lateral' : 'transversal (z), tombo frontal'}<br>` +
-    `I<sub>cm</sub> = <b>${f3(Icm)}</b> u·m²<br>` +
+    `I<sub>cm</sub> = <b>${f3(Icm)}</b> kg·m²<br>` +
     `D² = ${f3(dist)}² + ${f3(yc)}² = <b>${f3(D2)}</b> m²<br>` +
-    `I<sub>aresta</sub> = ${f3(Icm)} + ${f2(M)}·${f3(D2)} = <b>${f3(Iedge)}</b> u·m²`;
+    `I<sub>aresta</sub> = ${f3(Icm)} + ${f2(M)}·${f3(D2)} = <b>${f3(Iedge)}</b> kg·m²`;
   $('tipSubst').innerHTML =
     `θ<sub>crit</sub> = arctan(${f3(dist)} / ${f3(yc)}) = <b>${critDeg.toFixed(2)}°</b><br>` +
     `τ<sub>rest</sub> = ${f2(M)}·9,81·(${f3(dist)}·cos ${angleDeg.toFixed(1)}° − ${f3(yc)}·sen ${angleDeg.toFixed(1)}°)<br>` +
-    `= <b class="${tau < 0 ? 'neg' : ''}">${f2(tau)}</b> u·m²/s²`;
+    `= <b class="${tau < 0 ? 'neg' : ''}">${f2(tau)}</b> N·m`;
 
   const cls = v => v < 0 ? ' class="neg"' : '';
   $('res').innerHTML =
-    `<tr><td>Massa total M</td><td>${f2(M)} u</td></tr>` +
+    `<tr><td>Massa total M</td><td>${f2(M)} kg</td></tr>` +
     `<tr><td>Centro de massa (x, y, z)</td><td>(${f2(xc)}; ${f2(yc)}; ${f2(zc)}) m</td></tr>` +
     `<tr><td>Distância à aresta (dist)</td><td>${f3(dist)} m</td></tr>` +
-    `<tr><td>I<sub>cm</sub></td><td>${f3(Icm)} u·m²</td></tr>` +
-    `<tr><td>I<sub>aresta</sub></td><td>${f3(Iedge)} u·m²</td></tr>` +
+    `<tr><td>I<sub>cm</sub></td><td>${f3(Icm)} kg·m²</td></tr>` +
+    `<tr><td>I<sub>aresta</sub></td><td>${f3(Iedge)} kg·m²</td></tr>` +
     `<tr><td>Ângulo atual θ</td><td>${angleDeg.toFixed(1)}°</td></tr>` +
     `<tr><td>Ângulo crítico</td><td>${critDeg.toFixed(2)}°</td></tr>` +
     `<tr><td>Margem (θ<sub>crit</sub> − θ)</td><td${cls(margem)}>${margem.toFixed(2)}°</td></tr>` +
-    `<tr><td>Torque restaurador</td><td${cls(tau)}>${f2(tau)} u·m²/s²</td></tr>`;
+    `<tr><td>Torque restaurador</td><td${cls(tau)}>${f2(tau)} N·m</td></tr>`;
 }
 
 $('preset').addEventListener('change', e => { applyPreset(e.target.value); update(); });
@@ -342,7 +342,7 @@ $('viewSide').addEventListener('click', () => { camera.position.set(14, 9, 16); 
 $('toggleCalc').addEventListener('click', () => $('calc').classList.toggle('open'));
 $('resetAll').addEventListener('click', () => {
   $('preset').value = '8';
-  $('cellMass').value = '2';
+  $('cellMass').value = '2000';
   $('tiltDirection').value = 'side';
   $('sideDir').value = '1';
   $('rampAngle').value = '0';
