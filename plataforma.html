@@ -1,0 +1,1270 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#F0EEE6">
+  <title>Controle de Inclinação</title>
+  <style>
+    :root {
+      --bg: #F0EEE6;
+      --card: #FAF9F5;
+      --ink: #141413;
+      --mute: #6F6E68;
+      --line: #E0DBCD;
+      --clay: #D97757;
+      --accent: #C6613F;
+      --accent-ink: #FFFFFF;
+      --ok: #5E8A5A;
+      --warn: #BA7517;
+      --bad: #B53D2E;
+      --soft: #E8E4D8;
+      --serif: ui-serif, Georgia, "Times New Roman", serif;
+    }
+
+    @media (prefers-color-scheme:dark) {
+      :root {
+        --bg: #262624;
+        --card: #30302E;
+        --ink: #FAF9F5;
+        --mute: #B0AEA5;
+        --line: #46453F;
+        --accent: #D97757;
+        --accent-ink: #1F1E1D;
+        --ok: #8DB88A;
+        --warn: #E3A93B;
+        --bad: #E5806F;
+        --soft: #3A3935;
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent
+    }
+
+    [hidden] {
+      display: none !important
+    }
+
+    html,
+    body {
+      height: 100%;
+      margin: 0
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--ink);
+      font: 15px/1.35 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      overscroll-behavior: none
+    }
+
+    .wrap {
+      height: 100vh;
+      height: 100dvh;
+      max-width: 640px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: calc(10px + env(safe-area-inset-top)) 12px calc(10px + env(safe-area-inset-bottom));
+      overflow-y: auto
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      flex: none
+    }
+
+    h1 {
+      font: 500 20px/1.2 var(--serif);
+      margin: 0;
+      letter-spacing: -.2px
+    }
+
+    .chip {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 13px;
+      color: var(--mute);
+      white-space: nowrap;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 4px 11px
+    }
+
+    .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--bad)
+    }
+
+    .dot.on {
+      background: var(--ok)
+    }
+
+    .dot.mov {
+      background: var(--warn);
+      animation: pulse 1s infinite
+    }
+
+    @keyframes pulse {
+      50% {
+        opacity: .35
+      }
+    }
+
+    @media (prefers-reduced-motion:reduce) {
+
+      .dot.mov,
+      .alerta {
+        animation: none
+      }
+
+      .bar i,
+      .sbar i {
+        transition: none
+      }
+    }
+
+    .alerta {
+      flex: none;
+      background: var(--bad);
+      color: #fff;
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-weight: 650;
+      font-size: 14px;
+      text-align: center;
+      animation: pulse 1.2s infinite
+    }
+
+    .panels {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 10px
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 12px 14px
+    }
+
+    .display {
+      flex: 1;
+      min-height: 150px;
+      display: flex;
+      flex-direction: column
+    }
+
+    .read {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      flex: none
+    }
+
+    .big {
+      font: 500 clamp(46px, 9vh, 66px)/1 var(--serif);
+      letter-spacing: -2px;
+      font-variant-numeric: tabular-nums
+    }
+
+    .big small {
+      font-size: .45em;
+      color: var(--clay);
+      letter-spacing: 0;
+      margin-left: 2px
+    }
+
+    .side {
+      text-align: right;
+      color: var(--mute);
+      font-size: 13px;
+      font-variant-numeric: tabular-nums
+    }
+
+    .side b {
+      color: var(--ink);
+      font-weight: 600;
+      font-size: 17px
+    }
+
+    .vis {
+      flex: 1;
+      min-height: 0;
+      margin: 6px 0
+    }
+
+    .vis svg {
+      display: block;
+      width: 100%;
+      height: 100%
+    }
+
+    .bar {
+      height: 5px;
+      background: var(--soft);
+      border-radius: 3px;
+      overflow: hidden;
+      flex: none
+    }
+
+    .bar i {
+      display: block;
+      height: 100%;
+      width: 0;
+      background: var(--clay);
+      border-radius: 3px;
+      transition: width .2s
+    }
+
+    .controls {
+      flex: none;
+      display: grid;
+      gap: 8px
+    }
+
+    .seg {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      background: var(--soft);
+      border-radius: 12px;
+      padding: 3px;
+      gap: 3px
+    }
+
+    .seg.tabs {
+      grid-template-columns: repeat(3, 1fr);
+      flex: none
+    }
+
+    .seg button {
+      padding: 9px 0;
+      font-size: 14px;
+      background: transparent;
+      color: var(--mute);
+      border-radius: 9px
+    }
+
+    .seg button[aria-pressed=true] {
+      background: var(--card);
+      color: var(--ink);
+      box-shadow: 0 0 0 1px var(--line);
+      font-weight: 650
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px
+    }
+
+    .presets {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px
+    }
+
+    button {
+      font: inherit;
+      border: 0;
+      border-radius: 12px;
+      cursor: pointer;
+      color: var(--ink);
+      background: var(--soft);
+      padding: 11px;
+      touch-action: manipulation;
+      transition: background .15s
+    }
+
+    button:hover {
+      background: var(--line)
+    }
+
+    button:active {
+      transform: scale(.98)
+    }
+
+    button:focus-visible,
+    input:focus-visible,
+    select:focus-visible {
+      outline: 3px solid var(--clay);
+      outline-offset: 2px
+    }
+
+    .move {
+      font-size: 30px;
+      line-height: 1;
+      padding: 8px;
+      background: var(--accent);
+      color: var(--accent-ink);
+      font-weight: 500
+    }
+
+    .move:hover {
+      background: var(--clay)
+    }
+
+    .goto {
+      display: flex;
+      gap: 8px
+    }
+
+    input[type=number] {
+      flex: 1;
+      min-width: 0;
+      font: inherit;
+      font-size: 16px;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--bg);
+      color: var(--ink)
+    }
+
+    .go {
+      background: var(--ink);
+      color: var(--card);
+      padding: 10px 22px
+    }
+
+    .go:hover {
+      background: var(--ink);
+      opacity: .85
+    }
+
+    .sw {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 14px;
+      color: var(--mute);
+      padding: 0 2px
+    }
+
+    .sw b {
+      color: var(--ink);
+      font-weight: 600
+    }
+
+    .tog {
+      width: 48px;
+      height: 28px;
+      border-radius: 14px;
+      padding: 0;
+      position: relative;
+      background: var(--soft);
+      box-shadow: inset 0 0 0 1px var(--line)
+    }
+
+    .tog::after {
+      content: "";
+      position: absolute;
+      top: 4px;
+      left: 4px;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: var(--mute);
+      transition: transform .15s
+    }
+
+    .tog[aria-checked=true],
+    .tog[aria-checked=true]:hover {
+      background: var(--accent)
+    }
+
+    .tog[aria-checked=true]::after {
+      transform: translateX(20px);
+      background: #fff
+    }
+
+    .tog:hover {
+      background: var(--soft)
+    }
+
+    .stop {
+      background: transparent;
+      color: var(--bad);
+      box-shadow: inset 0 0 0 1.5px var(--bad);
+      font-weight: 650
+    }
+
+    .stop:hover {
+      background: var(--bad);
+      color: #fff
+    }
+
+    /* ---------- Slide para mover o motor ---------- */
+    input[type=range] {
+      width: 100%;
+      height: 34px;
+      margin: 0;
+      accent-color: var(--accent);
+      touch-action: pan-y;
+      cursor: pointer
+    }
+
+    .slide {
+      display: grid;
+      gap: 2px
+    }
+
+    .slide .lbl {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      color: var(--mute)
+    }
+
+    .slide b {
+      color: var(--ink);
+      font-weight: 600
+    }
+
+    /* ---------- Aba Motor ---------- */
+    select {
+      width: 100%;
+      font: inherit;
+      font-size: 16px;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--bg);
+      color: var(--ink)
+    }
+
+    .fld {
+      display: grid;
+      gap: 4px;
+      font-size: 13px;
+      color: var(--mute)
+    }
+
+    .fld input[type=number] {
+      width: 100%
+    }
+
+    .f2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px
+    }
+
+    /* ---------- Sensores ---------- */
+    .sensView {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      overflow-y: auto
+    }
+
+    .sensView h2 {
+      font: 500 16px/1.2 var(--serif);
+      margin: 0 0 8px
+    }
+
+    .sens {
+      display: grid;
+      gap: 10px
+    }
+
+    .s {
+      display: grid;
+      gap: 5px
+    }
+
+    .s .top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px
+    }
+
+    .s .top b {
+      font-weight: 650
+    }
+
+    .s .top span {
+      color: var(--mute);
+      font-size: 12px
+    }
+
+    .s .vals {
+      font-size: 13px;
+      color: var(--mute);
+      font-variant-numeric: tabular-nums;
+      text-align: right
+    }
+
+    .pill {
+      font-size: 12px;
+      font-weight: 650;
+      border-radius: 999px;
+      padding: 2px 10px;
+      background: var(--soft);
+      color: var(--ok);
+      box-shadow: inset 0 0 0 1px var(--line)
+    }
+
+    .pill.t {
+      background: var(--bad);
+      color: #fff;
+      box-shadow: none
+    }
+
+    .sbar {
+      height: 7px;
+      background: var(--soft);
+      border-radius: 4px;
+      overflow: hidden
+    }
+
+    .sbar i {
+      display: block;
+      height: 100%;
+      width: 0;
+      background: var(--ok);
+      border-radius: 4px;
+      transition: width .15s
+    }
+
+    .sbar i.w {
+      background: var(--warn)
+    }
+
+    .sbar i.t {
+      background: var(--bad)
+    }
+
+    .cfg {
+      display: grid;
+      gap: 8px
+    }
+
+    .hist {
+      display: grid;
+      gap: 6px;
+      max-height: 260px;
+      overflow-y: auto
+    }
+
+    .ev {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 4px 10px;
+      align-items: center;
+      font-size: 13px;
+      padding: 7px 10px;
+      background: var(--soft);
+      border-radius: 10px;
+      font-variant-numeric: tabular-nums
+    }
+
+    .ev b {
+      color: var(--bad)
+    }
+
+    .ev small {
+      color: var(--mute)
+    }
+
+    .vazio {
+      color: var(--mute);
+      font-size: 13px;
+      text-align: center;
+      padding: 10px 0
+    }
+
+    .nota {
+      color: var(--mute);
+      font-size: 12px;
+      margin: 0
+    }
+
+    .nota b {
+      color: var(--ink);
+      font-weight: 650
+    }
+
+    .wg {
+      transition: transform .15s
+    }
+
+    .wr {
+      fill: #2A2927;
+      transition: fill .15s
+    }
+
+    .wr.w {
+      fill: var(--warn)
+    }
+
+    .wr.t {
+      fill: var(--bad)
+    }
+
+    .bi {
+      fill: var(--ok)
+    }
+
+    .bi.w {
+      fill: var(--warn)
+    }
+
+    .bi.t {
+      fill: var(--bad)
+    }
+
+    @media (prefers-reduced-motion:reduce) {
+
+      .wg,
+      .wr {
+        transition: none
+      }
+    }
+
+    .graf {
+      width: 100%;
+      height: auto;
+      display: block
+    }
+
+    .stats {
+      display: flex;
+      justify-content: space-between;
+      gap: 6px;
+      font-size: 13px;
+      color: var(--mute);
+      font-variant-numeric: tabular-nums;
+      margin-top: 6px
+    }
+
+    .stats b {
+      color: var(--ink);
+      font-weight: 650
+    }
+
+    .leg {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px 12px;
+      font-size: 12px;
+      color: var(--mute);
+      margin-top: 8px
+    }
+
+    .leg i {
+      display: inline-block;
+      width: 16px;
+      height: 3px;
+      border-radius: 2px;
+      margin-right: 5px;
+      vertical-align: middle
+    }
+
+    #msg {
+      position: fixed;
+      left: 12px;
+      right: 12px;
+      top: calc(8px + env(safe-area-inset-top));
+      max-width: 616px;
+      margin: 0 auto;
+      background: var(--bad);
+      color: #fff;
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-size: 14px;
+      text-align: center;
+      z-index: 9
+    }
+
+    #msg:empty {
+      display: none
+    }
+
+    @media (orientation:landscape) and (max-height:520px) {
+      .panels {
+        flex-direction: row
+      }
+
+      .panels>* {
+        flex: 1;
+        min-width: 0
+      }
+
+      .controls {
+        align-content: center;
+        overflow-y: auto
+      }
+
+      .big {
+        font-size: clamp(40px, 14vh, 60px)
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="wrap">
+
+    <header>
+      <h1>Controle de inclinação</h1>
+      <div class="chip"><span class="dot" id="dot"></span><span id="status">Conectando…</span></div>
+    </header>
+
+    <div class="seg tabs" id="tabs" aria-label="Seção">
+      <button aria-pressed="true" onclick="aba('ctl')">Controle</button>
+      <button aria-pressed="false" onclick="aba('sen')">Sensores <span id="badge"></span></button>
+      <button aria-pressed="false" onclick="aba('cfg')">Motor</button>
+    </div>
+
+    <div class="alerta" id="alerta" role="alert" hidden></div>
+
+    <!-- ========== CONTROLE ========== -->
+    <div class="panels" id="vCtl">
+      <section class="card display" aria-live="polite">
+        <div class="read">
+          <div class="big"><span id="angulo">0.00</span><small>°</small></div>
+          <div class="side">Destino <b><span id="destino">0.00</span>°</b><br>Calculado <b><span
+                id="calculado">0.00</span>°</b><br><span id="micro">0</span> / <span id="microDest">0</span> passos
+          </div>
+        </div>
+        <div class="vis">
+          <svg viewBox="0 0 300 240" preserveAspectRatio="xMidYMid meet" role="img"
+            aria-label="Representação da inclinação, com as 4 rodas e a intensidade de cada sensor">
+            <line x1="35" y1="130" x2="265" y2="130" stroke="var(--line)" stroke-width="1.5" stroke-dasharray="3 4" />
+            <line x1="150" y1="25" x2="150" y2="130" stroke="var(--line)" stroke-width="1.5" stroke-dasharray="3 4" />
+            <path d="M235 130 A85 85 0 0 0 150 45" fill="none" stroke="var(--line)" stroke-width="2" />
+            <g id="placa" transform="rotate(0 150 130)">
+              <rect x="50" y="126" width="200" height="8" rx="4" fill="var(--clay)" />
+              <g id="caminhao" aria-hidden="true" stroke-linejoin="round">
+                <g class="wg" id="w0">
+                  <rect class="wr" x="66" y="84" width="20" height="42" rx="6" />
+                  <path d="M69 92h14M69 100h14M69 108h14M69 116h14" stroke="#55524E" stroke-width="2.2" />
+                </g>
+                <g class="wg" id="w1">
+                  <rect class="wr" x="88" y="84" width="20" height="42" rx="6" />
+                  <path d="M91 92h14M91 100h14M91 108h14M91 116h14" stroke="#55524E" stroke-width="2.2" />
+                </g>
+                <g class="wg" id="w2">
+                  <rect class="wr" x="192" y="84" width="20" height="42" rx="6" />
+                  <path d="M195 92h14M195 100h14M195 108h14M195 116h14" stroke="#55524E" stroke-width="2.2" />
+                </g>
+                <g class="wg" id="w3">
+                  <rect class="wr" x="214" y="84" width="20" height="42" rx="6" />
+                  <path d="M217 92h14M217 100h14M217 108h14M217 116h14" stroke="#55524E" stroke-width="2.2" />
+                </g>
+                <rect x="62" y="78" width="50" height="8" rx="3" fill="#E0A200" stroke="#B58500" />
+                <rect x="188" y="78" width="50" height="8" rx="3" fill="#E0A200" stroke="#B58500" />
+                <path d="M92 54 L102 42 H198 L208 54 Z" fill="#E0A200" stroke="#B58500" stroke-width="1.5" />
+                <rect x="90" y="54" width="120" height="6" rx="2" fill="#F2B705" stroke="#B58500" stroke-width="1.5" />
+                <rect x="107" y="66" width="6" height="14" rx="2" fill="#1F1E1D" />
+                <rect x="187" y="66" width="6" height="14" rx="2" fill="#1F1E1D" />
+                <rect x="116" y="60" width="68" height="26" rx="3" fill="#F2B705" stroke="#B58500" stroke-width="1.5" />
+                <rect x="122" y="64" width="56" height="16" rx="2" fill="#9FB7C4" />
+                <path d="M122 80 L134 64" stroke="#fff" stroke-opacity=".45" stroke-width="3" />
+                <rect x="108" y="86" width="84" height="28" rx="3" fill="#F2B705" stroke="#B58500" stroke-width="1.5" />
+                <rect x="120" y="90" width="60" height="20" rx="2" fill="#3A3A3A" />
+                <path d="M120 95h60M120 100h60M120 105h60" stroke="#8A8D90" stroke-width="1.5" />
+                <rect x="111" y="90" width="7" height="6" rx="1" fill="#FFF6D6" />
+                <rect x="182" y="90" width="7" height="6" rx="1" fill="#FFF6D6" />
+                <rect x="111" y="99" width="7" height="5" rx="1" fill="#F28C28" />
+                <rect x="182" y="99" width="7" height="5" rx="1" fill="#F28C28" />
+                <rect x="100" y="114" width="100" height="9" rx="2" fill="#8A8D90" stroke="#5F6164"
+                  stroke-width="1.5" />
+              </g>
+              <rect x="66" y="138" width="20" height="5" rx="2.5" fill="var(--soft)" />
+              <rect class="bi" id="bi0" x="66" y="138" width="0" height="5" rx="2.5" />
+              <text id="bl0" x="76" y="154" font-size="9" fill="var(--mute)" text-anchor="middle">S1</text>
+              <rect x="88" y="138" width="20" height="5" rx="2.5" fill="var(--soft)" />
+              <rect class="bi" id="bi1" x="88" y="138" width="0" height="5" rx="2.5" />
+              <text id="bl1" x="98" y="154" font-size="9" fill="var(--mute)" text-anchor="middle">S2</text>
+              <rect x="192" y="138" width="20" height="5" rx="2.5" fill="var(--soft)" />
+              <rect class="bi" id="bi2" x="192" y="138" width="0" height="5" rx="2.5" />
+              <text id="bl2" x="202" y="154" font-size="9" fill="var(--mute)" text-anchor="middle">S3</text>
+              <rect x="214" y="138" width="20" height="5" rx="2.5" fill="var(--soft)" />
+              <rect class="bi" id="bi3" x="214" y="138" width="0" height="5" rx="2.5" />
+              <text id="bl3" x="224" y="154" font-size="9" fill="var(--mute)" text-anchor="middle">S4</text>
+            </g>
+            <circle cx="150" cy="130" r="6" fill="var(--ink)" />
+            <text x="272" y="134" font-size="13" fill="var(--mute)" text-anchor="middle">0°</text>
+            <text x="150" y="16" font-size="13" fill="var(--mute)" text-anchor="middle">90°</text>
+          </svg>
+        </div>
+        <div class="bar"><i id="prog"></i></div>
+      </section>
+
+      <section class="card controls">
+        <div class="slide">
+          <div class="lbl"><span>Deslize para mover o motor</span><span><b id="slV">0.0</b>°</span></div>
+          <input type="range" id="slider" min="0" max="90" step="0.1" value="0"
+            aria-label="Deslizar para mover o motor">
+        </div>
+        <div class="seg" id="seg" aria-label="Incremento por toque"></div>
+        <div class="row">
+          <button class="move" onclick="mover('menos')" aria-label="Diminuir ângulo">−</button>
+          <button class="move" onclick="mover('mais')" aria-label="Aumentar ângulo">+</button>
+        </div>
+        <div class="presets">
+          <button onclick="ir(0)">0°</button>
+          <button onclick="ir(30)">30°</button>
+          <button onclick="ir(60)">60°</button>
+          <button onclick="ir(90)">90°</button>
+        </div>
+        <div class="goto">
+          <input type="number" id="alvo" min="0" max="90" step="0.1" inputmode="decimal" placeholder="Ir para (0–90°)"
+            aria-label="Ângulo em graus">
+          <button class="go" onclick="ir(parseFloat(alvo.value))">Ir</button>
+        </div>
+        <div class="sw">
+          <span>Inverter sentido do motor: <b id="invTxt">OFF</b></span>
+          <button class="tog" id="inv" role="switch" aria-checked="false" aria-label="Inverter sentido do motor"
+            onclick="inverter()"></button>
+        </div>
+        <div class="row">
+          <button class="stop" onclick="api('/stop')">Parar</button>
+          <button onclick="zerar()">Definir como 0°</button>
+        </div>
+      </section>
+    </div>
+
+    <!-- ========== SENSORES / TOMBAMENTO ========== -->
+    <div class="sensView" id="vSen" hidden>
+      <section class="card">
+        <h2>Sensores Hall 49E</h2>
+        <div class="sens" id="sens"></div>
+        <p class="nota" style="margin-top:10px">A barra enche conforme a variação se aproxima do limiar. Ao atingir o
+          limiar, o sensor é registrado como tombamento.</p>
+      </section>
+
+      <section class="card">
+        <h2>Gráfico · últimos 2 min</h2>
+        <svg class="graf" id="graf" viewBox="0 0 320 214" role="img"
+          aria-label="Variação dos sensores com média, mediana, desvio padrão e tombamentos"></svg>
+        <div class="stats">
+          <span>Média <b id="stM">–</b></span>
+          <span>Mediana <b id="stMed">–</b></span>
+          <span>Desvio padrão <b id="stSd">–</b></span>
+        </div>
+        <div class="leg">
+          <span><i style="background:var(--ink)"></i>Média</span>
+          <span><i style="background:none;border-top:3px dashed var(--warn);height:0"></i>Mediana</span>
+          <span><i style="background:var(--ink);opacity:.2;height:9px"></i>± desvio</span>
+          <span><i style="background:#D97757"></i>S1</span>
+          <span><i style="background:#5B8DB8"></i>S2</span>
+          <span><i style="background:#5E8A5A"></i>S3</span>
+          <span><i style="background:#9A6FB0"></i>S4</span>
+          <span><i style="background:var(--clay)"></i>Ângulo (0–90°)</span>
+        </div>
+        <p class="nota" style="margin-top:8px">Média, mediana e desvio padrão são calculados sobre a variação (Δ) dos 4
+          sensores a cada instante. Linhas pontilhadas = limiar. A faixa do meio mostra o ângulo da plataforma. Os
+          pontos
+          na faixa inferior mostram qual sensor tombou e quando, com o ângulo (°) e o passo (p) do motor naquele
+          instante.</p>
+      </section>
+
+      <section class="card cfg">
+        <h2 style="margin:0">Ajustes</h2>
+        <div class="goto">
+          <input type="number" id="lim" min="10" max="1500" step="10" inputmode="numeric"
+            aria-label="Limiar de variação (contagens ADC)" placeholder="Limiar (10–1500)">
+          <button class="go" onclick="salvarLimiar()">Aplicar</button>
+        </div>
+        <p class="nota">Limiar = variação da leitura (0–4095) em relação ao repouso que conta como tombamento.</p>
+        <button onclick="calibrar()">Calibrar repouso (posição atual)</button>
+      </section>
+
+      <section class="card">
+        <h2>Registros de tombamento <span id="nEv" style="color:var(--mute);font-size:13px"></span></h2>
+        <div class="hist" id="hist"></div>
+        <div class="row" style="margin-top:10px">
+          <button onclick="location.href='/log.csv'">Baixar CSV</button>
+          <button class="stop" onclick="limpar()">Limpar histórico</button>
+        </div>
+      </section>
+    </div>
+
+    <!-- ========== MOTOR / CONFIGURAÇÕES ========== -->
+    <div class="sensView" id="vCfg" hidden>
+      <section class="card cfg">
+        <h2 style="margin:0">Engrenagens</h2>
+        <div class="f2">
+          <label class="fld">Pinhão (no motor) · dentes
+            <input type="number" id="cPin" min="1" max="200" step="1" inputmode="numeric"></label>
+          <label class="fld">Coroa (plataforma) · dentes
+            <input type="number" id="cCor" min="1" max="500" step="1" inputmode="numeric"></label>
+        </div>
+      </section>
+
+      <section class="card cfg">
+        <h2 style="margin:0">Passos</h2>
+        <div class="f2">
+          <label class="fld">Passos por volta do motor
+            <input type="number" id="cPas" min="20" max="1000" step="1" inputmode="numeric"></label>
+          <label class="fld">Micropasso
+            <select id="cMic">
+              <option value="1">1 (passo inteiro)</option>
+              <option value="2">1/2</option>
+              <option value="4">1/4</option>
+              <option value="8">1/8</option>
+              <option value="16">1/16</option>
+            </select></label>
+        </div>
+        <p class="nota">O micropasso precisa ser igual ao configurado nos pinos MS1–MS3 do A4988 (1/16 = os três em
+          HIGH). Aqui você só informa ao código o que está na placa.</p>
+      </section>
+
+      <section class="card cfg">
+        <h2 style="margin:0">Velocidade e aceleração</h2>
+        <div class="f2">
+          <label class="fld">Período inicial (µs)
+            <input type="number" id="cIni" min="100" max="20000" step="50" inputmode="numeric"></label>
+          <label class="fld">Período de cruzeiro (µs)
+            <input type="number" id="cCru" min="50" max="20000" step="50" inputmode="numeric"></label>
+        </div>
+        <label class="fld">Aceleração (µs removidos por passo)
+          <input type="number" id="cAce" min="0" max="200" step="1" inputmode="numeric"></label>
+        <p class="nota">Período menor = mais rápido. O cruzeiro deve ser menor ou igual ao inicial. Se o motor perder
+          passos, aumente os períodos ou diminua a aceleração.</p>
+      </section>
+
+      <section class="card cfg">
+        <h2 style="margin:0">Resumo</h2>
+        <p class="nota" id="cRes" style="line-height:1.6"></p>
+        <div class="row">
+          <button class="go" onclick="salvarCfg()">Aplicar</button>
+          <button onclick="padroesCfg()">Restaurar padrões</button>
+        </div>
+        <p class="nota">Só é possível aplicar com o motor parado. O ângulo atual da plataforma é mantido.</p>
+      </section>
+    </div>
+
+    <div id="msg" role="status"></div>
+  </main>
+  <script>
+    const $ = id => document.getElementById(id);
+    const INCS = [0.1, 0.5, 1, 5, 10];
+    const PINOS = ['GPIO36 (VP)', 'GPIO39 (VN)', 'GPIO34', 'GPIO35'];
+    let inc = 1, aberta = 'ctl', ultProx = -1, bootAtual = 0, upAtual = 0, t0 = 0, limInit = false;
+    const JAN = 120000, COR = ['#D97757', '#5B8DB8', '#5E8A5A', '#9A6FB0'];
+    let ser = [], evs = [], limAtual = 150;
+    // Roda (0 = esquerda externa, 1 = esquerda interna, 2 = direita interna, 3 = direita externa) de cada sensor S1..S4.
+    // Para trocar a posição de um sensor, altere a ordem aqui.
+    const RODA_DO_SENSOR = [0, 1, 2, 3];
+    RODA_DO_SENSOR.forEach((w, i) => { $('bl' + w).textContent = 'S' + (i + 1) });
+    const f1 = x => (x > 0 ? '+' : '') + x.toFixed(1).replace('.', ',');
+
+    INCS.forEach(v => {
+      const b = document.createElement('button');
+      b.textContent = String(v).replace('.', ',') + '°';
+      b.onclick = () => { inc = v; marcar() };
+      b.dataset.v = v; $('seg').appendChild(b);
+    });
+    function marcar() {
+      [...$('seg').children].forEach(b => b.setAttribute('aria-pressed', +b.dataset.v === inc));
+    }
+    marcar();
+
+    // ---------- Slide: mover o motor deslizando ----------
+    const sl = $('slider');
+    let arrastando = false, tSlide = 0, pend = null, tmrSlide = null;
+    function enviarSlide() {
+      tmrSlide = null;
+      if (pend === null) return;
+      const v = pend; pend = null; tSlide = Date.now();
+      fetch('/angle?value=' + v).catch(() => erro('Comando não enviado. Verifique a conexão.'));
+    }
+    sl.addEventListener('pointerdown', () => { arrastando = true });
+    sl.addEventListener('input', () => {
+      arrastando = true;
+      $('slV').textContent = (+sl.value).toFixed(1);
+      pend = sl.value;
+      // no máximo ~8 comandos por segundo, para não sobrecarregar o ESP32
+      if (!tmrSlide) tmrSlide = setTimeout(enviarSlide, Math.max(0, 120 - (Date.now() - tSlide)));
+    });
+    sl.addEventListener('change', () => { clearTimeout(tmrSlide); pend = sl.value; enviarSlide(); arrastando = false });
+    sl.addEventListener('pointercancel', () => { arrastando = false });
+
+    // ---------- Aba Motor: engrenagens, passos e aceleração ----------
+    const CAMPOS = { pin: 'cPin', cor: 'cCor', mic: 'cMic', pas: 'cPas', pini: 'cIni', pcru: 'cCru', ace: 'cAce' };
+    const CFG_PAD = { pin: 10, cor: 38, mic: 16, pas: 200, pini: 2000, pcru: 800, ace: 4 };
+    const fx = (x, n) => x.toFixed(n).replace('.', ',');
+    function lerCfg() {
+      const o = {};
+      for (const k in CAMPOS) o[k] = parseInt($(CAMPOS[k]).value);
+      return o;
+    }
+    function preencherCfg(c) { for (const k in CAMPOS) $(CAMPOS[k]).value = c[k]; resumoCfg(); }
+    function padroesCfg() { preencherCfg(CFG_PAD) }
+    function resumoCfg() {
+      const c = lerCfg();
+      if (Object.values(c).some(isNaN) || c.pin < 1 || c.cor < 1) { $('cRes').textContent = 'Preencha todos os campos.'; return }
+      const rel = c.cor / c.pin, ppg = c.pas * c.mic * rel / 360, vel = 1e6 / c.pcru;
+      const rampa = c.ace > 0 ? Math.ceil(Math.max(0, c.pini - c.pcru) / c.ace) : null;
+      $('cRes').innerHTML =
+        'Relação <b>' + fx(rel, 2) + ' : 1</b> (o motor dá ' + fx(rel, 2) + ' voltas por volta da plataforma)<br>' +
+        '1° da plataforma = <b>' + fx(ppg, 2) + '</b> micropassos · resolução <b>' + fx(1 / ppg, 4) + '°</b><br>' +
+        'Curso de 0–90° = <b>' + Math.round(90 * ppg) + '</b> micropassos (' + fx(90 * rel / 360, 2) + ' volta do motor)<br>' +
+        'Cruzeiro: <b>' + Math.round(vel) + '</b> passos/s ≈ <b>' + fx(vel / ppg, 1) + '°/s</b><br>' +
+        'Rampa: ' + (rampa === null ? 'sem aceleração' : rampa + ' passos (≈ ' + fx(rampa / ppg, 1) + '°)');
+    }
+    Object.values(CAMPOS).forEach(id => $(id).addEventListener('input', resumoCfg));
+
+    async function carregarCfg() {
+      try {
+        const d = await (await fetch('/cfg')).json();
+        preencherCfg({ pin: d.pinhao, cor: d.coroa, mic: d.micro, pas: d.passos, pini: d.pini, pcru: d.pcru, ace: d.acel });
+      } catch (e) { erro('Não foi possível ler as configurações.') }
+    }
+    async function salvarCfg() {
+      const c = lerCfg();
+      if (Object.values(c).some(isNaN)) { erro('Preencha todos os campos.'); return }
+      if (c.pin < 1 || c.pin > 200 || c.cor < 1 || c.cor > 500) { erro('Dentes: pinhão 1–200, coroa 1–500.'); return }
+      if (c.pas < 20 || c.pas > 1000) { erro('Passos por volta: 20–1000.'); return }
+      if (c.pini < 100 || c.pini > 20000 || c.pcru < 50 || c.pcru > c.pini) { erro('Cruzeiro ≥ 50 µs e menor ou igual ao período inicial.'); return }
+      if (c.ace < 0 || c.ace > 200) { erro('Aceleração: 0–200.'); return }
+      const q = 'pinhao=' + c.pin + '&coroa=' + c.cor + '&micro=' + c.mic + '&passos=' + c.pas +
+        '&pini=' + c.pini + '&pcru=' + c.pcru + '&acel=' + c.ace;
+      if (await api('/cfgset?' + q)) carregarCfg();
+    }
+
+    // linhas dos sensores
+    PINOS.forEach((p, i) => {
+      const d = document.createElement('div'); d.className = 's';
+      d.innerHTML = '<div class="top"><div><b>S' + (i + 1) + '</b> <span>' + p + '</span></div>' +
+        '<div style="display:flex;align-items:center;gap:8px"><div class="vals" id="v' + i + '">–</div>' +
+        '<span class="pill" id="p' + i + '">OK</span></div></div>' +
+        '<div class="sbar"><i id="b' + i + '"></i></div>';
+      $('sens').appendChild(d);
+    });
+
+    const ABAS = ['ctl', 'sen', 'cfg'];
+    function aba(n) {
+      aberta = n;
+      $('vCtl').hidden = n !== 'ctl';
+      $('vSen').hidden = n !== 'sen';
+      $('vCfg').hidden = n !== 'cfg';
+      [...$('tabs').children].forEach((b, i) => b.setAttribute('aria-pressed', ABAS[i] === n));
+      if (n === 'sen') { eventos(); desenhar(); }
+      if (n === 'cfg') carregarCfg();
+    }
+
+    let tErro;
+    function erro(t) {
+      $('msg').textContent = t; clearTimeout(tErro);
+      if (t) tErro = setTimeout(() => { $('msg').textContent = '' }, 3000);
+    }
+
+    async function api(url) {
+      try {
+        const r = await fetch(url);
+        if (r.status === 409) { erro('Aguarde o motor parar.'); return false }
+        if (!r.ok) throw 0;
+        atualizar();
+        return true;
+      } catch (e) { erro('Comando não enviado. Verifique a conexão.'); return false }
+    }
+    const mover = d => api('/move?dir=' + d + '&inc=' + inc);
+    function ir(v) {
+      if (isNaN(v) || v < 0 || v > 90) { erro('Informe um ângulo entre 0 e 90°.'); return }
+      api('/angle?value=' + v);
+    }
+    function zerar() {
+      if (confirm('Definir a posição atual como 0°?')) api('/zero');
+    }
+    function calibrar() {
+      if (confirm('Definir a leitura atual dos 4 sensores como repouso (sem tombamento)?')) api('/calibrar');
+    }
+    async function salvarLimiar() {
+      const v = parseInt($('lim').value);
+      if (isNaN(v) || v < 10 || v > 1500) { erro('Informe um limiar entre 10 e 1500.'); return }
+      await api('/limiar?value=' + v);
+    }
+    async function limpar() {
+      if (confirm('Apagar todo o histórico de tombamentos?')) { if (await api('/limpar')) eventos(); }
+    }
+
+    async function inverter() {
+      const novo = $('inv').getAttribute('aria-checked') !== 'true';
+      try {
+        const r = await fetch('/dir?inv=' + (novo ? 1 : 0));
+        if (r.status === 409) { erro('Aguarde o motor parar para inverter o sentido.'); return }
+        if (!r.ok) throw 0;
+        atualizar();
+      } catch (e) { erro('Comando não enviado. Verifique a conexão.') }
+    }
+
+    // instante (ms desde 1970) de um evento da inicialização atual
+    function tempoEv(e) { return e.boot === bootAtual ? t0 - (upAtual - e.ms) : null }
+    function hora(e) {
+      const t = tempoEv(e);
+      return t !== null ? new Date(t).toLocaleString('pt-BR') : 'inicialização ' + e.boot + ' · +' + (e.ms / 1000).toFixed(1) + ' s';
+    }
+
+    async function eventos() {
+      try {
+        const r = await fetch('/eventos'); evs = await r.json();
+        $('hist').innerHTML = evs.length ? evs.map(e =>
+          `<div class="ev"><b>S${e.sensor}</b>` +
+          `<span>Δ ${e.d.map((x, i) => 'S' + (i + 1) + ' ' + (x > 0 ? '+' : '') + x).join(' · ')}</span>` +
+          `<span>${e.angulo.toFixed(2).replace('.', ',')}° · passo ${e.passo}</span>` +
+          `<small style="grid-column:1/-1">Leituras: ${e.v.join(' / ')}</small>` +
+          `<small style="grid-column:1/-1">Média ${f1(e.media)} · Mediana ${f1(e.mediana)} · σ ${f1(e.desvio).replace('+', '')}</small>` +
+          `<small style="grid-column:1/-1">#${e.seq} · ${hora(e)}</small></div>`
+        ).join('') : '<div class="vazio">Nenhum tombamento registrado.</div>';
+        if (aberta === 'sen') desenhar();
+      } catch (e) { }
+    }
+
+    function stats(d) {
+      const n = d.length, m = d.reduce((a, b) => a + b, 0) / n;
+      const o = [...d].sort((a, b) => a - b);
+      const med = (o[(n - 1) >> 1] + o[n >> 1]) / 2;
+      const sd = Math.sqrt(d.reduce((a, b) => a + (b - m) ** 2, 0) / n);
+      return { m, med, sd };
+    }
+
+    function desenhar() {
+      const svg = $('graf');
+      const L = 36, R = 314, T = 8, B = 120;
+      if (ser.length < 2) {
+        svg.innerHTML = '<text x="160" y="80" font-size="12" fill="var(--mute)" text-anchor="middle">Aguardando dados…</text>';
+        return;
+      }
+      const fim = ser[ser.length - 1].t, ini = fim - JAN;
+      let ym = limAtual * 1.3;
+      for (const p of ser) {
+        for (const v of p.d) ym = Math.max(ym, Math.abs(v) * 1.1);
+        ym = Math.max(ym, (Math.abs(p.m) + p.sd) * 1.1);
+      }
+      const X = t => L + (t - ini) / JAN * (R - L);
+      const Y = v => (T + B) / 2 - v / ym * ((B - T) / 2);
+      const path = f => ser.map((p, i) => (i ? 'L' : 'M') + X(p.t).toFixed(1) + ' ' + Y(f(p)).toFixed(1)).join('');
+      let h = '';
+
+      // referências: zero e limiares
+      h += `<line x1="${L}" x2="${R}" y1="${Y(0)}" y2="${Y(0)}" stroke="var(--line)" stroke-width="1"/>`;
+      [limAtual, -limAtual].forEach(v => {
+        h += `<line x1="${L}" x2="${R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--bad)" stroke-width="1" stroke-dasharray="2 3" opacity=".7"/>`;
+        h += `<text x="${L - 3}" y="${Y(v) + 3}" font-size="9" fill="var(--mute)" text-anchor="end">${v > 0 ? '+' : '−'}${limAtual}</text>`;
+      });
+      h += `<text x="${L - 3}" y="${Y(0) + 3}" font-size="9" fill="var(--mute)" text-anchor="end">0</text>`;
+
+      // faixa média ± desvio
+      const sup = ser.map(p => X(p.t).toFixed(1) + ',' + Y(p.m + p.sd).toFixed(1)).join(' ');
+      const inf = [...ser].reverse().map(p => X(p.t).toFixed(1) + ',' + Y(p.m - p.sd).toFixed(1)).join(' ');
+      h += `<polygon points="${sup} ${inf}" fill="var(--ink)" opacity=".12"/>`;
+
+      // sensores (linhas finas), mediana e média
+      for (let i = 0; i < 4; i++)
+        h += `<path d="${path(p => p.d[i])}" fill="none" stroke="${COR[i]}" stroke-width="1" opacity=".75"/>`;
+      h += `<path d="${path(p => p.med)}" fill="none" stroke="var(--warn)" stroke-width="1.6" stroke-dasharray="5 3"/>`;
+      h += `<path d="${path(p => p.m)}" fill="none" stroke="var(--ink)" stroke-width="2"/>`;
+
+      // faixa do ângulo (0–90°) da plataforma
+      const Ya = a => 150 - a / 90 * 22;
+      h += `<line x1="${L}" x2="${R}" y1="150" y2="150" stroke="var(--line)" stroke-width="1"/>`;
+      h += `<text x="${L - 3}" y="153" font-size="9" fill="var(--mute)" text-anchor="end">0°</text>`;
+      h += `<text x="${L - 3}" y="131" font-size="9" fill="var(--mute)" text-anchor="end">90°</text>`;
+      h += `<path d="${ser.map((p, i) => (i ? 'L' : 'M') + X(p.t).toFixed(1) + ' ' + Ya(p.a).toFixed(1)).join('')}" fill="none" stroke="var(--clay)" stroke-width="1.6"/>`;
+
+      // faixa inferior: qual sensor tombou
+      for (let i = 0; i < 4; i++) {
+        const y = 160 + i * 13;
+        h += `<line x1="${L}" x2="${R}" y1="${y}" y2="${y}" stroke="var(--line)" stroke-width="1"/>`;
+        h += `<text x="${L - 3}" y="${y + 3}" font-size="9" font-weight="700" fill="${COR[i]}" text-anchor="end">S${i + 1}</text>`;
+      }
+      for (const e of evs) {
+        const t = tempoEv(e);
+        if (t === null || t < ini || t > fim) continue;
+        const x = X(t).toFixed(1), y = 160 + (e.sensor - 1) * 13;
+        h += `<line x1="${x}" x2="${x}" y1="${T}" y2="${y}" stroke="var(--bad)" stroke-width="1" stroke-dasharray="3 3" opacity=".6"/>`;
+        h += `<circle cx="${x}" cy="${y}" r="4.5" fill="${COR[e.sensor - 1]}" stroke="var(--bad)" stroke-width="1.5"/>`;
+        h += `<circle cx="${x}" cy="${Ya(e.angulo).toFixed(1)}" r="3" fill="var(--bad)"/>`;
+        const dir = X(t) > (L + R) / 2;
+        h += `<text x="${dir ? X(t) - 8 : X(t) + 8}" y="${y + 3}" font-size="8" fill="var(--ink)" text-anchor="${dir ? 'end' : 'start'}">${e.angulo.toFixed(1).replace('.', ',')}° · p${e.passo}</text>`;
+      }
+
+      h += `<text x="${L}" y="211" font-size="9" fill="var(--mute)">−2 min</text>`;
+      h += `<text x="${R}" y="211" font-size="9" fill="var(--mute)" text-anchor="end">agora</text>`;
+      svg.innerHTML = h;
+    }
+
+    async function atualizar() {
+      try {
+        const r = await fetch('/status'); const d = await r.json();
+        $('angulo').textContent = d.angulo.toFixed(2);
+        $('destino').textContent = d.destino.toFixed(2);
+        $('calculado').textContent = d.calculado.toFixed(2);
+        $('micro').textContent = d.micro;
+        $('microDest').textContent = d.microDest;
+        $('placa').setAttribute('transform', 'rotate(' + (-d.angulo) + ' 150 130)');
+        $('inv').setAttribute('aria-checked', d.inv);
+        $('invTxt').textContent = d.inv ? 'ON' : 'OFF';
+        $('prog').style.width = (d.angulo / 90 * 100) + '%';
+        $('dot').className = 'dot ' + (d.movendo ? 'mov' : 'on');
+        $('status').textContent = d.movendo ? 'Movendo' : 'Parado';
+        // mantém o slide alinhado ao destino, exceto enquanto a pessoa o arrasta
+        if (!arrastando && Date.now() - tSlide > 600) { sl.value = d.destino; $('slV').textContent = d.destino.toFixed(1); }
+
+        // ---- sensores ----
+        bootAtual = d.boot; upAtual = d.up; t0 = Date.now(); limAtual = d.lim;
+        const nomes = [];
+        d.sens.forEach((v, i) => {
+          const dl = v - d.base[i], pct = Math.min(100, Math.abs(dl) / d.lim * 100);
+          $('v' + i).textContent = v + ' (Δ ' + (dl > 0 ? '+' : '') + dl + ')';
+          const b = $('b' + i); b.style.width = pct + '%';
+          b.className = d.tomb[i] ? 't' : (pct >= 60 ? 'w' : '');
+          const p = $('p' + i); p.textContent = d.tomb[i] ? 'TOMBAMENTO' : 'OK';
+          p.className = 'pill' + (d.tomb[i] ? ' t' : '');
+          if (d.tomb[i]) nomes.push('S' + (i + 1));
+
+          // caminhão: roda sem contato sobe e fica vermelha; barra mostra a intensidade
+          const w = RODA_DO_SENSOR[i], est = d.tomb[i] ? 't' : (pct >= 60 ? 'w' : '');
+          const g = $('w' + w);
+          g.style.transform = d.tomb[i] ? 'translateY(-7px)' : '';
+          g.firstElementChild.setAttribute('class', 'wr ' + est);
+          $('bi' + w).setAttribute('class', 'bi ' + est);
+          $('bi' + w).setAttribute('width', (pct / 100 * 20).toFixed(1));
+        });
+        $('alerta').hidden = !d.tombado;
+        if (d.tombado) $('alerta').textContent = '⚠ TOMBAMENTO detectado — ' + nomes.join(', ');
+        $('badge').textContent = d.tombado ? '⚠' : '';
+        $('nEv').textContent = '(' + d.nEv + ')';
+        if (!limInit && document.activeElement !== $('lim')) { $('lim').value = d.lim; limInit = true }
+        if (d.prox !== ultProx) { ultProx = d.prox; eventos(); }
+
+        // série para o gráfico + estatísticas ao vivo (Δ dos 4 sensores)
+        const dls = d.sens.map((v, i) => v - d.base[i]), st = stats(dls);
+        ser.push({ t: t0, d: dls, m: st.m, med: st.med, sd: st.sd, a: d.angulo, p: d.micro });
+        while (ser.length && t0 - ser[0].t > JAN) ser.shift();
+        $('stM').textContent = f1(st.m);
+        $('stMed').textContent = f1(st.med);
+        $('stSd').textContent = f1(st.sd).replace('+', '');
+        if (aberta === 'sen') desenhar();
+      } catch (e) {
+        $('dot').className = 'dot'; $('status').textContent = 'Desconectado';
+      }
+    }
+    setInterval(atualizar, 250); atualizar();
+  </script>
+</body>
+
+</html>
